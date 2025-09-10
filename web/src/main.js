@@ -6,6 +6,9 @@ import PrimeVue from 'primevue/config'
 import Lara from '@primevue/themes/lara'
 import { definePreset } from '@primevue/themes'
 import 'primeicons/primeicons.css'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { fas } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 const GreenLara = definePreset(Lara, {
   semantic: {
@@ -25,7 +28,10 @@ const GreenLara = definePreset(Lara, {
   }
 })
 
+library.add(fas)
+
 const app = createApp(App)
+app.component('font-awesome-icon', FontAwesomeIcon)
 app.use(PrimeVue, {
   theme: {
     preset: GreenLara
