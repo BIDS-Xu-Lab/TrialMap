@@ -28,7 +28,7 @@
           </div>
           <div style="display:flex;gap:8px;">
             <Button label="Undo" severity="secondary" @click="onclickUndoButton('2')" />
-            <Button label="Next" @click="onclickNextTreatment()" />
+            <Button label="Next" @click="onclickNextTreatment()" :disabled="!selectedTreatment" />
           </div>
         </StepPanel>
       </StepItem>
@@ -41,7 +41,7 @@
             </div></div>
           <div style="display:flex;gap:8px;">
             <Button label="Undo" severity="secondary" @click="onclickUndoButton('3')" />
-            <Button label="Next" @click="onclickNextEndpoint()" />
+            <Button label="Next" @click="onclickNextEndpoint()" :disabled="!selectedEndpoint" />
           </div>
         </StepPanel>
       </StepItem>
@@ -109,7 +109,7 @@ const selectedCriteria = ref([])
 onMounted(async () => {
   try {
     // Resolve the asset URL via Vite
-    const url = new URL('../data/sample_data.xlsx', import.meta.url)
+    const url = new URL('../../public/data/meta_data.xlsx', import.meta.url)
     const res = await fetch(url)
     const ab = await res.arrayBuffer()
     const wb = XLSX.read(ab, { type: 'array' })
@@ -188,6 +188,14 @@ function goResult() {
     selectedEndpoint: selectedEndpoint.value,
     selectedCriteria: selectedCriteria.value
   })
+  flushAll()
+}
+
+function flushAll() {
+  selectedCancerType.value = ''
+  selectedTreatment.value = ''
+  selectedEndpoint.value = ''
+  selectedCriteria.value = []
 }
 </script>
 
