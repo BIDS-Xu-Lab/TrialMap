@@ -37,6 +37,5 @@ app.use(PrimeVue, {
     preset: GreenLara
   }
 })
-
 app.mount('#app')
 

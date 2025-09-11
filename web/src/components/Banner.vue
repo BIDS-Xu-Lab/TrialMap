@@ -14,7 +14,7 @@ defineEmits(['home'])
 
 <style scoped>
 .banner {
-  height: 128px;
+  height: 96px;
   background-color: #e7fff2;
   display: flex;
   align-items: center;
