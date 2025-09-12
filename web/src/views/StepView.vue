@@ -110,9 +110,10 @@ const selectedEndpoint = ref('')
 const selectedCriteria = ref([])
 onMounted(async () => {
   try {
-    // Resolve the asset URL via Vite
+    // 读取 meta 数据（public 根下的 /data/meta_data.xlsx），兼容 base 前缀
     flushAll()
-    const url = new URL('../../public/data/meta_data.xlsx', import.meta.url)
+    const base = import.meta.env.BASE_URL || '/'
+    const url = `${base}data/meta_data.xlsx`
     const res = await fetch(url)
     const ab = await res.arrayBuffer()
     const wb = XLSX.read(ab, { type: 'array' })

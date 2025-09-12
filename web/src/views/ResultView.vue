@@ -53,29 +53,29 @@
                 <div class="r-card" style="min-height: 240px;">
                     <div class="r-card-header">
                         <h3 class="r-title">Top 4 Pathways</h3>
-                        <Button class="ml-2" size="small">
+                        <Button class="ml-2" size="small" @click="onResetSort">
                             Reset 
                             <FontAwesomeIcon :icon="['fas', 'arrows-rotate']" />
                         </Button>
                     </div>
-                    <DataTable v-model:selection="selectedTopPath" :value="Top4PathwaysResult" selectionMode="single" :metaKeySelection="false" dataKey="path_id" rowHover tableStyle="margin-top: 24px;" size="large" @rowSelect="onTopSelect" @rowUnselect="onTopUnselect">
+                    <DataTable ref="topTableRef" v-model:selection="selectedTopPath" v-model:sortField="sortField" v-model:sortOrder="sortOrder" sortMode="single" :value="Top4PathwaysResult" selectionMode="single" :metaKeySelection="false" dataKey="path_id" rowHover tableStyle="margin-top: 24px;" size="large" @rowSelect="onTopSelect" @rowUnselect="onTopUnselect">
                         <Column field="pathName" header="Paths" />
-                        <Column header="HR">
+                        <Column field="hr" header="HR" sortable dataType="numeric">
                             <template #body="{ data }">{{ format2(data.hr) }}</template>
                         </Column>
-                        <Column header="AE">
+                        <Column field="ae" header="AE" sortable dataType="numeric">
                             <template #body="{ data }">{{ format2(data.ae) }}</template>
                         </Column>
-                        <Column header="# of Patients">
+                        <Column field="number_of_patients" header="# of Patients" sortable dataType="numeric">
                             <template #body="{ data }">{{ data.number_of_patients }}</template>
                         </Column>
-                        <Column header="EASE">
+                        <Column field="ease" header="EASE" sortable dataType="numeric">
                             <template #body="{ data }">{{ format2(data.ease) }}</template>
                         </Column>
-                        <Column header="G-Index">
+                        <Column field="g_index" header="G-Index" sortable dataType="numeric">
                             <template #body="{ data }">{{ format2(data.g_index) }}</template>
                         </Column>
-                        <Column header="selogHR">
+                        <Column field="selog_hr" header="selogHR" sortable dataType="numeric">
                             <template #body="{ data }">{{ format2(data.selog_hr) }}</template>
                         </Column>
                     </DataTable>
@@ -112,10 +112,14 @@ const criteriaNameToIndex = computed(() => {
 const selectedSet = computed(() => new Set(props.result.selectedCriteria || []))
 const selectedCriteriaPath = ref([])
 const selectedTopPath = ref(null)
+const topTableRef = ref(null)
+const sortField = ref(null)
+const sortOrder = ref(null)
 
 onMounted(async () => {
-    const url = new URL('../../public/data/meta_data.xlsx', import.meta.url)
-    const res = await fetch(url)
+    const base = import.meta.env.BASE_URL || '/'
+    const metaUrl = `${base}data/meta_data.xlsx`
+    const res = await fetch(metaUrl)
     const ab = await res.arrayBuffer()
     const wb = XLSX.read(ab, { type: 'array' })
 
@@ -150,15 +154,13 @@ onMounted(async () => {
         { label: 'control', value: resultRelatedMetadata.value.control || '-' }
     ]
     criteriaTableRows.value = resultRelatedMetadata.value.criteria || []
-    const filepath = `../../public/trail_dataset/${props.result.selectedTreatment}_results.csv`
-    const fileUrl = new URL(filepath, import.meta.url)
-    const fileRes = await fetch(fileUrl)
-    if (fileRes.status === 200) {
-        const fileAb = await fileRes.arrayBuffer()
-        const fileWb = XLSX.read(fileAb, { type: 'array' })
-        const fileSheet = fileWb.SheetNames[0]
-        const fileWs = fileWb.Sheets[fileSheet]
-        const trailResult = XLSX.utils.sheet_to_json(fileWs, { defval: null })
+    const csvUrl = `${base}data/trail_dataset/${props.result.selectedTreatment}_results.csv`
+    const csvRes = await fetch(csvUrl)
+    if (csvRes.ok) {
+        const csvAb = await csvRes.arrayBuffer()
+        const csvWb = XLSX.read(csvAb, { type: 'array' })
+        const csvWs = csvWb.Sheets[csvWb.SheetNames[0]]
+        const trailResult = XLSX.utils.sheet_to_json(csvWs, { defval: null })
         Top4PathwaysResult.value = getTop4Pathways(
           trailResult,
           props.result.selectedCriteria,
@@ -167,7 +169,7 @@ onMounted(async () => {
         )
         console.log(Top4PathwaysResult.value)
     } else {
-        console.error('File not found:', filepath)
+        console.error('File not found:', csvUrl)
     }
 })
 
@@ -243,6 +245,16 @@ function onTopSelect(event) {
 }
 function onTopUnselect() {
     selectedCriteriaPath.value = []
+}
+function onResetSort() {
+    sortField.value = null
+    sortOrder.value = null
+    if (topTableRef?.value) {
+        // 触发表格重渲染
+        const tmp = [...Top4PathwaysResult.value]
+        Top4PathwaysResult.value = []
+        queueMicrotask(() => (Top4PathwaysResult.value = tmp))
+    }
 }
 </script>
 
