@@ -1,7 +1,7 @@
 <template>
     <div class="banner" @click="$emit('home')">
         <h1 class="banner-title">
-            <font-awesome-icon :icon="['fas', 'route']" />
+            <font-awesome-icon :icon="['fas', 'route']" style="color: #1ca40a;" />
             TrialMap   
         </h1>
     </div>
@@ -14,18 +14,18 @@ defineEmits(['home'])
 
 <style scoped>
 .banner {
-  height: 96px;
-  background-color: #e7fff2;
+  height: 64px;
+  background-color: #ffffff;
   display: flex;
   align-items: center;
   padding: 0 48px;
   justify-content: space-between;
-  color: rgb(0, 0, 0);
-  border-bottom: 2px solid #0b8538;
+  border-bottom: 1px solid #e5e7eb;
 }
 .banner-title {
-  font-size: 32px;
+  font-size: 24px;
   font-weight: 600;
+  color: #1ca40a;
   cursor: pointer;
 }
 </style>

@@ -50,20 +50,22 @@
         <StepPanel>
           <div class="panel-content">
             <h3 style="margin: 0 0 12px 0;">Select the eligibility criteria:</h3>
-            <DataTable :value="filteredCriteria" tableStyle="min-width: 40rem">
-              <Column header="#">
-                <template #body="{ index }">{{ index + 1 }}</template>
-              </Column>
-              <Column field="type" header="type" />
-              <Column field="criteria_description" header="criteria" />
-              <Column header="Must apply" style="width: 8rem; text-align:center;">
-                <template #body="{ data, index }">
-                  <div style="display:flex;justify-content:center;">
-                    <Checkbox v-model="selectedCriteria" :value="data.criteria_name" :inputId="`crit-${index}`" />
-                  </div>
-                </template>
-              </Column>
-            </DataTable>
+            <div class="table-card">
+              <DataTable :value="filteredCriteria" tableStyle="min-width: 40rem">
+                <Column header="#">
+                  <template #body="{ index }">{{ index + 1 }}</template>
+                </Column>
+                <Column field="type" header="type" />
+                <Column field="criteria_description" header="criteria" />
+                <Column header="Must apply" style="width: 8rem; text-align:center;">
+                  <template #body="{ data, index }">
+                    <div style="display:flex;justify-content:center;">
+                      <Checkbox v-model="selectedCriteria" :value="data.criteria_name" :inputId="`crit-${index}`" />
+                    </div>
+                  </template>
+                </Column>
+              </DataTable>
+            </div>
           </div>
           <div style="display:flex; gap:8px; margin-top:12px;">
             <Button label="Undo" severity="secondary" @click="onclickUndoButton('4')" />
@@ -109,6 +111,7 @@ const selectedCriteria = ref([])
 onMounted(async () => {
   try {
     // Resolve the asset URL via Vite
+    flushAll()
     const url = new URL('../../public/data/meta_data.xlsx', import.meta.url)
     const res = await fetch(url)
     const ab = await res.arrayBuffer()
@@ -188,7 +191,7 @@ function goResult() {
     selectedEndpoint: selectedEndpoint.value,
     selectedCriteria: selectedCriteria.value
   })
-  flushAll()
+
 }
 
 function flushAll() {
@@ -204,6 +207,19 @@ function flushAll() {
   width: 100%;
   margin: 0 auto;
   padding: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.10);
+}
+.table-card {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  justify-content: center; /* center DataTable horizontally */
 }
 .panel-content {
   display: flex;
