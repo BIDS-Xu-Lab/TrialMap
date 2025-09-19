@@ -154,7 +154,7 @@ onMounted(async () => {
         { label: 'control', value: resultRelatedMetadata.value.control || '-' }
     ]
     criteriaTableRows.value = resultRelatedMetadata.value.criteria || []
-    const csvUrl = `${base}data/trail_dataset/${props.result.selectedTreatment}_results.csv`
+    const csvUrl = `${base}data/trail_dataset/${props.result.selectedTreatment}_results_web.csv`
     const csvRes = await fetch(csvUrl)
     if (csvRes.ok) {
         const csvAb = await csvRes.arrayBuffer()
