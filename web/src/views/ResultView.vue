@@ -26,9 +26,9 @@
                     <div class="r-value">{{ result?.selectedEndpoint || '-' }}</div>
                 </div>
 
-                <div class="r-card">
+                <div class="r-card push-down">
                     <h3 class="r-title">Criteria</h3>
-                    <DataTable :value="criteriaTableRows" tableStyle="min-width: 24rem" class="criteria-table" size="small" :rowClass="criteriaRowClass">
+                    <DataTable :value="criteriaTableRows" tableStyle="min-width: 24rem" class="criteria-table" size="small" :rowClass="criteriaRowClass" scrollable scrollHeight="320px">
                         <Column header="#" :style="{width:'40px'}">
                             <template #body="{ index }">{{ index + 1 }}</template>
                         </Column>
@@ -50,35 +50,49 @@
             </div>
 
             <div class="col-right">
-                <div v-if="(Top4PathwaysResult && Top4PathwaysResult.length > 0)" class="r-card" style="min-height: 240px;">
-                    <div class="r-card-header">
-                        <h3 class="r-title">Top 4 Pathways</h3>
-                        <Button class="ml-2" size="small" @click="onResetSort">
-                            Reset 
-                            <FontAwesomeIcon :icon="['fas', 'arrows-rotate']" />
-                        </Button>
+                <div  v-if="(Top4PathwaysResult && Top4PathwaysResult.length > 0)" class="right-stack">
+                    <div class="r-card" style="min-height: 240px;">
+                        <div class="r-card-header">
+                            <h3 class="r-title">Top 4 Pathways</h3>
+                            <Button class="ml-2" size="small" @click="onResetSort">
+                                Reset 
+                                <FontAwesomeIcon :icon="['fas', 'arrows-rotate']" />
+                            </Button>
+                        </div>
+                        <DataTable ref="topTableRef" v-model:selection="selectedTopPath" v-model:sortField="sortField" v-model:sortOrder="sortOrder" sortMode="single" :value="Top4PathwaysResult" selectionMode="single" :metaKeySelection="false" dataKey="path_id" rowHover tableStyle="margin-top: 24px;" size="large" @rowSelect="onTopSelect" @rowUnselect="onTopUnselect">
+                            <Column field="pathName" header="Paths" />
+                            <Column field="hr" header="HR" sortable dataType="numeric">
+                                <template #body="{ data }">{{ format2(data.hr) }}</template>
+                            </Column>
+                            <Column field="ae" header="AE" sortable dataType="numeric">
+                                <template #body="{ data }">{{ format2(data.ae) }}</template>
+                            </Column>
+                            <Column field="number_of_patients" header="# of Patients" sortable dataType="numeric">
+                                <template #body="{ data }">{{ data.number_of_patients }}</template>
+                            </Column>
+                            <Column field="ease" header="EASE" sortable dataType="numeric">
+                                <template #body="{ data }">{{ format2(data.ease) }}</template>
+                            </Column>
+                            <Column field="g_index" header="G-Index" sortable dataType="numeric">
+                                <template #body="{ data }">{{ format2(data.g_index) }}</template>
+                            </Column>
+                            <Column field="selog_hr" header="selogHR" sortable dataType="numeric">
+                                <template #body="{ data }">{{ format2(data.selog_hr) }}</template>
+                            </Column>
+                        </DataTable>
                     </div>
-                    <DataTable ref="topTableRef" v-model:selection="selectedTopPath" v-model:sortField="sortField" v-model:sortOrder="sortOrder" sortMode="single" :value="Top4PathwaysResult" selectionMode="single" :metaKeySelection="false" dataKey="path_id" rowHover tableStyle="margin-top: 24px;" size="large" @rowSelect="onTopSelect" @rowUnselect="onTopUnselect">
-                        <Column field="pathName" header="Paths" />
-                        <Column field="hr" header="HR" sortable dataType="numeric">
-                            <template #body="{ data }">{{ format2(data.hr) }}</template>
-                        </Column>
-                        <Column field="ae" header="AE" sortable dataType="numeric">
-                            <template #body="{ data }">{{ format2(data.ae) }}</template>
-                        </Column>
-                        <Column field="number_of_patients" header="# of Patients" sortable dataType="numeric">
-                            <template #body="{ data }">{{ data.number_of_patients }}</template>
-                        </Column>
-                        <Column field="ease" header="EASE" sortable dataType="numeric">
-                            <template #body="{ data }">{{ format2(data.ease) }}</template>
-                        </Column>
-                        <Column field="g_index" header="G-Index" sortable dataType="numeric">
-                            <template #body="{ data }">{{ format2(data.g_index) }}</template>
-                        </Column>
-                        <Column field="selog_hr" header="selogHR" sortable dataType="numeric">
-                            <template #body="{ data }">{{ format2(data.selog_hr) }}</template>
-                        </Column>
-                    </DataTable>
+                    <div class="r-card" style="min-height: 240px;">
+                        <div class="r-card-header">
+                            <h3 class="r-title">Charts</h3>
+                        </div>
+                        <div class="r-card-content">
+                            <div v-for="item in Top4PathwaysResult" :key="item.path_id">
+                                <div class="r-card-content-item">
+                                    <Chart type="radar" :data="getChartData(item)" :options="getChartOptions()" class="chart-radar" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div v-else class="r-card r-card-empty" style="flex: 1;">
                     result not found
@@ -282,15 +296,88 @@ function onResetSort() {
         queueMicrotask(() => (Top4PathwaysResult.value = tmp))
     }
 }
+
+function getMaxes() {
+    const rows = Top4PathwaysResult.value || []
+    return {
+        hr: Math.max(1, ...rows.map(r => Number(r.hr) || 0)),
+        selog_hr: Math.max(1, ...rows.map(r => Number(r.selog_hr) || 0)),
+        ae: Math.max(1, ...rows.map(r => Number(r.ae) || 0)),
+        ease: Math.max(1, ...rows.map(r => Number(r.ease) || 0)),
+        g_index: Math.max(1, ...rows.map(r => Number(r.g_index) || 0)),
+        number_of_patients: Math.max(1, ...rows.map(r => Number(r.number_of_patients) || 0))
+    }
+}
+
+function normalize(value, max) {
+    const v = Number(value) || 0
+    const m = Number(max) || 1
+    if (m <= 0) return 0
+    const n = v / m
+    return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 0
+}
+
+function getChartData(item) {
+    const maxes = getMaxes()
+    const gap = 0.1
+    const values = [
+        normalize(item.hr, maxes.hr), gap,
+        normalize(item.selog_hr, maxes.selog_hr), gap,
+        normalize(item.ae, maxes.ae), gap,
+        normalize(item.ease, maxes.ease), gap,
+        normalize(item.g_index, maxes.g_index), gap,
+        normalize(item.number_of_patients, maxes.number_of_patients), gap
+    ]
+    return {
+        labels: ['HR', '', 'selogHR', '', 'AE', '', 'EASE', '', 'G-Index', '', '# of Patients', ''],
+        datasets: [
+            {
+                label: item.pathName,
+                data: values,
+                fill: true,
+                backgroundColor: 'rgba(16,185,129,0.15)',
+                borderColor: 'rgba(16,185,129,0.7)',
+                pointRadius: 0,
+                borderWidth: 1
+            }
+        ]
+    }
+}
+
+function getChartOptions() {
+    return {
+        plugins: {
+            legend: { display: true }
+        },
+        layout: {
+            padding: { top: 10 }
+        },
+        scales: {
+            r: {
+                beginAtZero: true,
+                min: 0,
+                max: 1,
+                ticks: {
+                    stepSize: 0.25,
+                    color: 'rgba(17, 24, 39, 0.35)',
+                    backdropColor: 'transparent'
+                }
+            }
+        }
+    }
+}
 </script>
 
 <style scoped>
 .result { padding: 0; text-align: left; }
-.result-layout { display: grid; grid-template-columns: 3fr 5fr; gap: 10px; }
-.col-left, .col-right { display: flex; flex-direction: column; gap: 16px; }
+.result-layout { display: grid; grid-template-columns: 3fr 5fr; gap: 10px; align-items: start; }
+.col-left, .col-right { display: flex; flex-direction: column; gap: 12px; }
 .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .r-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px; }
-.r-title { margin: 0 0 4px 0; font-size: 13px; font-weight: 600; }
+.r-card-content { display: flex; flex-direction: row; gap: 12px; }
+/* chart container width for PrimeVue Chart */
+.r-card-content-item { width: 240px; }
+.r-title { margin: 0 0 4px 0; font-size: 15px; font-weight: 600; }
 .r-value { color: #111827; font-size: 13px; }
 .small-table :deep(.p-datatable) { font-size: 12px; }
 .criteria-table :deep(.p-datatable) { font-size: 11px; table-layout: fixed; }
@@ -310,6 +397,7 @@ function onResetSort() {
   display: flex;
   align-items: center;
   gap: 16px;
+  padding: 8px;
 }
 .r-card-empty {
   display: flex;
@@ -319,4 +407,6 @@ function onResetSort() {
   color: #6b7280;
   font-size: 14px;
 }
+.push-down { margin-top: 6px; }
+.right-stack { display: flex; flex-direction: column; gap: 12px; }
 </style>

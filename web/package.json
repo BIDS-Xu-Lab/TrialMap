@@ -16,6 +16,7 @@
     "@fortawesome/vue-fontawesome": "^3.1.2",
     "@primeuix/themes": "^1.2.3",
     "@primevue/themes": "^4.3.9",
+    "chart.js": "^4.5.0",
     "primeicons": "^7.0.0",
     "primevue": "^4.3.9",
     "vue": "^3.4.0",
