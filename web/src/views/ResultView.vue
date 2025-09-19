@@ -50,7 +50,7 @@
             </div>
 
             <div class="col-right">
-                <div class="r-card" style="min-height: 240px;">
+                <div v-if="(Top4PathwaysResult && Top4PathwaysResult.length > 0)" class="r-card" style="min-height: 240px;">
                     <div class="r-card-header">
                         <h3 class="r-title">Top 4 Pathways</h3>
                         <Button class="ml-2" size="small" @click="onResetSort">
@@ -79,6 +79,9 @@
                             <template #body="{ data }">{{ format2(data.selog_hr) }}</template>
                         </Column>
                     </DataTable>
+                </div>
+                <div v-else class="r-card r-card-empty" style="flex: 1;">
+                    result not found
                 </div>
             </div>
         </div>
@@ -119,17 +122,29 @@ const sortOrder = ref(null)
 onMounted(async () => {
     const base = import.meta.env.BASE_URL || '/'
     const metaUrl = `${base}data/meta_data.xlsx`
-    const res = await fetch(metaUrl)
-    const ab = await res.arrayBuffer()
-    const wb = XLSX.read(ab, { type: 'array' })
+    let metaRows = []
+    let trialCriteriaRows = []
+    let criteriaRows = []
+    try {
+        const res = await fetch(metaUrl)
+        if (!res.ok) throw new Error('meta not found')
+        const ct = (res.headers.get('content-type') || '').toLowerCase()
+        if (ct.includes('text/html')) throw new Error('unexpected html')
+        const ab = await res.arrayBuffer()
+        const wb = XLSX.read(ab, { type: 'array' })
 
-    const wsMetadata = wb.Sheets[wb.SheetNames[0]]
-    const wsTrialCriteria = wb.Sheets[wb.SheetNames[1]]
-    const wsCriteria = wb.Sheets[wb.SheetNames[2]]
+        const wsMetadata = wb.Sheets[wb.SheetNames[0]]
+        const wsTrialCriteria = wb.Sheets[wb.SheetNames[1]]
+        const wsCriteria = wb.Sheets[wb.SheetNames[2]]
 
-    const metaRows = XLSX.utils.sheet_to_json(wsMetadata, { defval: null })
-    const trialCriteriaRows = XLSX.utils.sheet_to_json(wsTrialCriteria, { defval: null })
-    const criteriaRows = XLSX.utils.sheet_to_json(wsCriteria, { defval: null })
+        metaRows = wsMetadata ? XLSX.utils.sheet_to_json(wsMetadata, { defval: null }) : []
+        trialCriteriaRows = wsTrialCriteria ? XLSX.utils.sheet_to_json(wsTrialCriteria, { defval: null }) : []
+        criteriaRows = wsCriteria ? XLSX.utils.sheet_to_json(wsCriteria, { defval: null }) : []
+    } catch (e) {
+        metaRows = []
+        trialCriteriaRows = []
+        criteriaRows = []
+    }
 
     const metaRow = metaRows.find(r => r.trial_name === props.result.selectedTreatment)
     const criteriaNames = new Set(
@@ -155,21 +170,33 @@ onMounted(async () => {
     ]
     criteriaTableRows.value = resultRelatedMetadata.value.criteria || []
     const csvUrl = `${base}data/trail_dataset/${props.result.selectedTreatment}_results_web.csv`
-    const csvRes = await fetch(csvUrl)
-    if (csvRes.ok) {
-        const csvAb = await csvRes.arrayBuffer()
-        const csvWb = XLSX.read(csvAb, { type: 'array' })
-        const csvWs = csvWb.Sheets[csvWb.SheetNames[0]]
-        const trailResult = XLSX.utils.sheet_to_json(csvWs, { defval: null })
-        Top4PathwaysResult.value = getTop4Pathways(
-          trailResult,
-          props.result.selectedCriteria,
-          props.result.selectedEndpoint,
-          criteriaNameToIndex.value
-        )
-        console.log(Top4PathwaysResult.value)
-    } else {
-        console.error('File not found:', csvUrl)
+    try {
+        const csvRes = await fetch(csvUrl)
+        if (csvRes.ok) {
+            const ct = (csvRes.headers.get('content-type') || '').toLowerCase()
+            if (ct.includes('text/html')) {
+                Top4PathwaysResult.value = []
+            } else {
+                try {
+                    const csvText = await csvRes.text()
+                    const csvWb = XLSX.read(csvText, { type: 'string' })
+                    const csvWs = csvWb.Sheets[csvWb.SheetNames[0]]
+                    const trailResult = csvWs ? XLSX.utils.sheet_to_json(csvWs, { defval: null }) : []
+                    Top4PathwaysResult.value = getTop4Pathways(
+                      trailResult,
+                      props.result.selectedCriteria,
+                      props.result.selectedEndpoint,
+                      criteriaNameToIndex.value
+                    )
+                } catch (e) {
+                    Top4PathwaysResult.value = []
+                }
+            }
+        } else {
+            Top4PathwaysResult.value = []
+        }
+    } catch (e) {
+        Top4PathwaysResult.value = []
     }
 })
 
@@ -250,7 +277,6 @@ function onResetSort() {
     sortField.value = null
     sortOrder.value = null
     if (topTableRef?.value) {
-        // 触发表格重渲染
         const tmp = [...Top4PathwaysResult.value]
         Top4PathwaysResult.value = []
         queueMicrotask(() => (Top4PathwaysResult.value = tmp))
@@ -284,5 +310,13 @@ function onResetSort() {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+.r-card-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  color: #6b7280;
+  font-size: 14px;
 }
 </style>

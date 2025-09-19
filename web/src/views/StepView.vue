@@ -1,79 +1,89 @@
 <template>
   <div class="card">
-    <Stepper v-model:value="activeStep" linear>
+    <div class="step-layout">
+      <div class="step-left">
+        <Stepper v-model:value="activeStep" linear>
       <StepItem value="1">
         <Step>Cancer Type</Step>
-        <StepPanel>
-          <div class="panel-content">
-            <p>Select a cancer type:</p>
-            <div v-for="(item, idx) in cancerType" :key="item" style="display:flex;align-items:center;gap:8px;margin:6px 0;">
-              <RadioButton v-model="selectedCancerType" :value="item" :inputId="`ct-${idx}`" name="cancer-type" />
-              <label :for="`ct-${idx}`">{{ item }}</label>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;">
-            <Button label="Next" :disabled="!selectedCancerType" @click="onclickNextCancerType()" />
-          </div>
-        </StepPanel>
+        <StepPanel></StepPanel>
       </StepItem>
       <StepItem value="2">
         <Step>Treatment</Step>
-        <StepPanel>
-          <div class="panel-content">
-            <p>Select a trial (treatment regimens and line of therapy will be pre-set):</p>
-            <div v-for="(item, idx) in treatment" :key="item" style="display:flex;align-items:center;gap:8px;margin:6px 0;">
-              <RadioButton v-model="selectedTreatment" :value="item" :inputId="`t-${idx}`" name="treatment" />
-              <label :for="`t-${idx}`">{{ item }}</label>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;">
-            <Button label="Undo" severity="secondary" @click="onclickUndoButton('2')" />
-            <Button label="Next" @click="onclickNextTreatment()" :disabled="!selectedTreatment" />
-          </div>
-        </StepPanel>
+        <StepPanel></StepPanel>
       </StepItem>
       <StepItem value="3">
         <Step>Endpoint</Step>
-        <StepPanel>
-          <div class="panel-content"><p>Select an endpoint:</p><div v-for="(item, idx) in endpoint" :key="item" style="display:flex;align-items:center;gap:8px;margin:6px 0;">
-              <RadioButton v-model="selectedEndpoint" :value="item" :inputId="`e-${idx}`" name="endpoint" />
-              <label :for="`e-${idx}`">{{ item }}</label>
-            </div></div>
-          <div style="display:flex;gap:8px;">
-            <Button label="Undo" severity="secondary" @click="onclickUndoButton('3')" />
-            <Button label="Next" @click="onclickNextEndpoint()" :disabled="!selectedEndpoint" />
-          </div>
-        </StepPanel>
+        <StepPanel></StepPanel>
       </StepItem>
       <StepItem value="4">
         <Step>Criteria</Step>
-        <StepPanel>
-          <div class="panel-content">
-            <h3 style="margin: 0 0 12px 0;">Select the eligibility criteria:</h3>
-            <div class="table-card">
-              <DataTable :value="filteredCriteria" tableStyle="min-width: 40rem">
-                <Column header="#">
-                  <template #body="{ index }">{{ index + 1 }}</template>
-                </Column>
-                <Column field="type" header="type" />
-                <Column field="criteria_description" header="criteria" />
-                <Column header="Must apply" style="width: 8rem; text-align:center;">
-                  <template #body="{ data, index }">
-                    <div style="display:flex;justify-content:center;">
-                      <Checkbox v-model="selectedCriteria" :value="data.criteria_name" :inputId="`crit-${index}`" />
-                    </div>
-                  </template>
-                </Column>
-              </DataTable>
-            </div>
+        <StepPanel></StepPanel>
+      </StepItem>
+        </Stepper>
+      </div>
+      <div class="step-right">
+        <div class="panel-content" v-if="activeStep === '1'">
+          <p>Select a cancer type:</p>
+          <div v-for="(item, idx) in cancerType" :key="item" style="display:flex;align-items:center;gap:8px;margin:6px 0;">
+            <RadioButton v-model="selectedCancerType" :value="item" :inputId="`ct-${idx}`" name="cancer-type" />
+            <label :for="`ct-${idx}`">{{ item }}</label>
+          </div>
+          <div style="display:flex;gap:8px; margin-top: 8px;">
+            <Button label="Next" :disabled="!selectedCancerType" @click="onclickNextCancerType()" />
+          </div>
+        </div>
+
+        <div class="panel-content" v-else-if="activeStep === '2'">
+          <p>Select a trial (treatment regimens and line of therapy will be pre-set):</p>
+          <div v-for="(item, idx) in treatment" :key="item" style="display:flex;align-items:center;gap:8px;margin:6px 0;">
+            <RadioButton v-model="selectedTreatment" :value="item" :inputId="`t-${idx}`" name="treatment" />
+            <label :for="`t-${idx}`">{{ item }}</label>
+          </div>
+          <div style="display:flex;gap:8px; margin-top: 8px;">
+            <Button label="Undo" severity="secondary" @click="onclickUndoButton('2')" />
+            <Button label="Next" @click="onclickNextTreatment()" :disabled="!selectedTreatment" />
+          </div>
+        </div>
+
+        <div class="panel-content" v-else-if="activeStep === '3'">
+          <p>Select an endpoint:</p>
+          <div v-if="isAHNC" class="note">For advanced head and neck cancer, the Flatiron data does not include progression information, so we were only able to estimate HR for OS.</div>
+          <div v-for="(item, idx) in endpoint" :key="item" style="display:flex;align-items:center;gap:8px;margin:6px 0;">
+            <RadioButton v-model="selectedEndpoint" :value="item" :inputId="`e-${idx}`" name="endpoint" :disabled="isAHNC && item === 'Progression-free survival (PFS)'" />
+            <label :for="`e-${idx}`">{{ item }}</label>
+          </div>
+          <div style="display:flex;gap:8px; margin-top: 8px;">
+            <Button label="Undo" severity="secondary" @click="onclickUndoButton('3')" />
+            <Button label="Next" @click="onclickNextEndpoint()" :disabled="!selectedEndpoint" />
+          </div>
+        </div>
+
+        <div class="panel-content" v-else-if="activeStep === '4'">
+          <h3 style="margin: 0 0 12px 0;">Select the eligibility criteria:</h3>
+          <div class="table-card">
+            <div v-if="!filteredCriteria || filteredCriteria.length === 0" class="empty-box">No criteria found for current selection</div>
+            <DataTable v-else :value="filteredCriteria" tableStyle="min-width: 40rem">
+              <Column header="#">
+                <template #body="{ index }">{{ index + 1 }}</template>
+              </Column>
+              <Column field="type" header="type" />
+              <Column field="criteria_description" header="criteria" />
+              <Column header="Must apply" style="width: 8rem; text-align:center;">
+                <template #body="{ data, index }">
+                  <div style="display:flex;justify-content:center;">
+                    <Checkbox v-model="selectedCriteria" :value="data.criteria_name" :inputId="`crit-${index}`" />
+                  </div>
+                </template>
+              </Column>
+            </DataTable>
           </div>
           <div style="display:flex; gap:8px; margin-top:12px;">
             <Button label="Undo" severity="secondary" @click="onclickUndoButton('4')" />
-            <Button label="Result" @click="goResult" />
+            <Button label="Result" @click="goResult" :disabled="!filteredCriteria || filteredCriteria.length === 0" />
           </div>
-        </StepPanel>
-      </StepItem>
-    </Stepper>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -108,9 +118,9 @@ const selectedCancerType = ref('')
 const selectedTreatment = ref('')
 const selectedEndpoint = ref('')
 const selectedCriteria = ref([])
+const isAHNC = ref(false)
 onMounted(async () => {
   try {
-    // 读取 meta 数据（public 根下的 /data/meta_data.xlsx），兼容 base 前缀
     flushAll()
     const base = import.meta.env.BASE_URL || '/'
     const url = `${base}data/meta_data.xlsx`
@@ -158,6 +168,7 @@ function onclickNextCancerType() {
   console.log('Selected Cancer Type:', selectedCancerType.value)
   treatment.value =[ ...new Set(metadata.value.filter(item => item.cancer_type === selectedCancerType.value).map(item => item.trial_name))]
   console.log('Parsed Excel treatment:', treatment.value)
+  isAHNC.value = String(selectedCancerType.value).trim().toLowerCase() === 'advanced head and neck cancer (ahnc)'
   activeStep.value = '2'
 }
 
@@ -182,6 +193,10 @@ function onclickNextTreatment() {
 
 function onclickNextEndpoint() {
   console.log('Selected Endpoint:', selectedEndpoint.value)
+  if (isAHNC.value && selectedEndpoint.value === 'Progression-free survival (PFS)') {
+    selectedEndpoint.value = ''
+    return
+  }
   activeStep.value = '4'
 }
 
@@ -213,6 +228,12 @@ function flushAll() {
   border-radius: 12px;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.10);
 }
+.step-layout { display: grid; grid-template-columns: 260px 1fr; gap: 12px; align-items: stretch; }
+.step-left { position: sticky; top: 12px; align-self: stretch; height: 100%; }
+.step-right { min-height: 300px; }
+/* 让 Stepper 充满高度并均匀分布步骤 */
+.step-left :deep(.p-stepper) { height: 100%; }
+.step-left :deep(.p-stepper-nav) { height: 100%; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; }
 .table-card {
   width: 100%;
   background: #ffffff;
@@ -222,13 +243,23 @@ function flushAll() {
   display: flex;
   justify-content: center; /* center DataTable horizontally */
 }
+.empty-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: #6b7280;
+  font-size: 14px;
+  width: 100%;
+}
 .panel-content {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
   align-items: flex-start;
   padding: 1rem; border: 1px solid 
   #ccc; margin-bottom: 0.5rem;
   border-radius: 8px;
 }
+.note { color: #374151; font-size: 12px; background: #F9FAFB; border: 1px dashed #E5E7EB; padding: 8px 10px; border-radius: 6px; }
 </style>
