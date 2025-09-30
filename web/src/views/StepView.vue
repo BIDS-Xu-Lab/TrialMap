@@ -71,7 +71,7 @@
               <Column header="Must apply" style="width: 8rem; text-align:center;">
                 <template #body="{ data, index }">
                   <div style="display:flex;justify-content:center;">
-                    <Checkbox v-model="selectedCriteria" :value="data.criteria_name" :inputId="`crit-${index}`" />
+                    <Checkbox v-model="selectedCriteria" :value="data.criteria_name" :inputId="`crit-${index}`" :disabled="data.must_apply" />
                   </div>
                 </template>
               </Column>
@@ -119,6 +119,8 @@ const selectedTreatment = ref('')
 const selectedEndpoint = ref('')
 const selectedCriteria = ref([])
 const isAHNC = ref(false)
+// keep a set of criteria names that must be applied for current trial
+const mustApplyCriteria = ref(new Set())
 onMounted(async () => {
   try {
     flushAll()
@@ -157,6 +159,7 @@ function onclickBackButton(currentStep) {
     // clear derived list only; keep original rows intact
     trialCriteria.value = []
     filteredCriteria.value = []
+    mustApplyCriteria.value = new Set()
   } else if (currentStep === '4') {
     selectedEndpoint.value = ''
     selectedCriteria.value = []
@@ -175,18 +178,27 @@ function onclickNextCancerType() {
 function onclickNextTreatment() {
   console.log('Selected Treatment:', selectedTreatment.value)
   // derive from original rows, do not overwrite original data
+  const rowsForTrial = trialCriteriaRows.value.filter(item => item.trial_name === selectedTreatment.value)
   trialCriteria.value = [
-    ...new Set(
-      trialCriteriaRows.value
-        .filter(item => item.trial_name === selectedTreatment.value)
-        .map(item => item.criteria_name)
-    )
+    ...new Set(rowsForTrial.map(item => item.criteria_name))
   ]
+  // compute must-apply set for this trial
+  const mustSet = new Set(
+    rowsForTrial
+      .filter(item => {
+        const v = item.must_apply
+        if (v === null || v === undefined) return false
+        const s = String(v).trim().toLowerCase()
+        return s !== '' && s !== '0' && s !== 'false' && s !== 'no'
+      })
+      .map(item => item.criteria_name)
+  )
+  mustApplyCriteria.value = mustSet
   console.log('Parsed Excel trialCriteria:', trialCriteria.value)
   // derive rows from criteria by name
-  filteredCriteria.value = criteria.value.filter(row =>
-    trialCriteria.value.includes(row.criteria_name)
-  )
+  filteredCriteria.value = criteria.value
+    .filter(row => trialCriteria.value.includes(row.criteria_name))
+    .map(row => ({ ...row, must_apply: mustSet.has(row.criteria_name) }))
   console.log('Derived filteredCriteria rows:', filteredCriteria.value)
   activeStep.value = '3'
 }
@@ -197,6 +209,8 @@ function onclickNextEndpoint() {
     selectedEndpoint.value = ''
     return
   }
+  // preselect and lock must-apply criteria for the upcoming step
+  selectedCriteria.value = Array.from(mustApplyCriteria.value)
   activeStep.value = '4'
 }
 
