@@ -126,6 +126,7 @@ const emit = defineEmits(['returnToSelection'])
 const resultRelatedMetadata = ref({})
 const Top4PathwaysResult = ref([])
 const Top4PathwaysColumns = ref([])
+const normParams = ref({})
 const regimenRows = ref([])
 const criteriaTableRows = ref([])
 const criteriaNameToIndex = computed(() => {
@@ -211,6 +212,10 @@ onMounted(async () => {
                       props.result.selectedCriteria,
                       props.result.selectedEndpoint,
                       criteriaNameToIndex.value
+                    )
+                    normParams.value = computeNormalizationParams(
+                      trailResult,
+                      props.result.selectedEndpoint
                     )
                 } catch (e) {
                     Top4PathwaysResult.value = []
@@ -311,36 +316,51 @@ function onReturnToSelection() {
     emit('returnToSelection')
 }
 
-function getMaxes() {
-    const rows = Top4PathwaysResult.value || []
+function computeNormalizationParams(allRows, endpoint) {
+    const getNums = (rows, key) => rows.map(r => Number(r?.[key])).filter(n => Number.isFinite(n))
+    const hrKey = endpoint === 'Overall survival (OS)' ? 'hr_os' : 'hr_pfs'
+    const selogKey = endpoint === 'Overall survival (OS)' ? 'selog_hr_os' : 'selog_hr_pfs'
+    const makeParams = (arr, reverse) => {
+        const has = Array.isArray(arr) && arr.length > 0
+        const min = has ? Math.min(...arr) : 0
+        const max = has ? Math.max(...arr) : 0
+        return { min, max, reverse, min_val: 0.4, max_val: 1 }
+    }
     return {
-        hr: Math.max(1, ...rows.map(r => Number(r.hr) || 0)),
-        selog_hr: Math.max(1, ...rows.map(r => Number(r.selog_hr) || 0)),
-        ae: Math.max(1, ...rows.map(r => Number(r.ae) || 0)),
-        ease: Math.max(1, ...rows.map(r => Number(r.ease) || 0)),
-        g_index: Math.max(1, ...rows.map(r => Number(r.g_index) || 0)),
-        number_of_patients: Math.max(1, ...rows.map(r => Number(r.number_of_patients) || 0))
+        hr: makeParams(getNums(allRows, hrKey), true),
+        selog_hr: makeParams(getNums(allRows, selogKey), true),
+        ae: makeParams(getNums(allRows, 'ae'), true),
+        ease: makeParams(getNums(allRows, 'ease'), true),
+        g_index: makeParams(getNums(allRows, 'g_index'), false),
+        number_of_patients: makeParams(getNums(allRows, 'number_of_patients'), false)
     }
 }
 
-function normalize(value, max) {
-    const v = Number(value) || 0
-    const m = Number(max) || 1
-    if (m <= 0) return 0
-    const n = v / m
-    return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 0
+function normalizeRangeValue(x, params) {
+    const v = Number(x)
+    if (!Number.isFinite(v) || !params) return 0.4
+    const min = Number(params.min)
+    const max = Number(params.max)
+    const denom = max - min
+    if (!(denom > 0)) return params.min_val ?? 0.4
+    let norm01 = params.reverse ? (max - v) / denom : (v - min) / denom
+    if (!Number.isFinite(norm01)) norm01 = 0
+    norm01 = Math.max(0, Math.min(1, norm01))
+    const a = params.min_val ?? 0.4
+    const b = params.max_val ?? 1
+    return norm01 * (b - a) + a
 }
 
 function getChartData(item) {
-    const maxes = getMaxes()
-    const gap = 0.1
+    const p = normParams.value || {}
+    const gap = 0.25
     const values = [
-        normalize(item.hr, maxes.hr), gap,
-        normalize(item.selog_hr, maxes.selog_hr), gap,
-        normalize(item.ae, maxes.ae), gap,
-        normalize(item.ease, maxes.ease), gap,
-        normalize(item.g_index, maxes.g_index), gap,
-        normalize(item.number_of_patients, maxes.number_of_patients), gap
+        normalizeRangeValue(item.hr, p.hr), gap,
+        normalizeRangeValue(item.selog_hr, p.selog_hr), gap,
+        normalizeRangeValue(item.ae, p.ae), gap,
+        normalizeRangeValue(item.ease, p.ease), gap,
+        normalizeRangeValue(item.g_index, p.g_index), gap,
+        normalizeRangeValue(item.number_of_patients, p.number_of_patients), gap
     ]
     return {
         labels: ['HR', '', 'selogHR', '', 'AE', '', 'EASE', '', 'G-Index', '', '# of Patients', ''],
