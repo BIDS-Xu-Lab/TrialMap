@@ -40,7 +40,7 @@
             <label :for="`t-${idx}`">{{ item }}</label>
           </div>
           <div style="display:flex;gap:8px; margin-top: 8px;">
-            <Button label="Undo" severity="secondary" @click="onclickUndoButton('2')" />
+            <Button label="Back" severity="secondary" @click="onclickBackButton('2')" />
             <Button label="Next" @click="onclickNextTreatment()" :disabled="!selectedTreatment" />
           </div>
         </div>
@@ -53,7 +53,7 @@
             <label :for="`e-${idx}`">{{ item }}</label>
           </div>
           <div style="display:flex;gap:8px; margin-top: 8px;">
-            <Button label="Undo" severity="secondary" @click="onclickUndoButton('3')" />
+            <Button label="Back" severity="secondary" @click="onclickBackButton('3')" />
             <Button label="Next" @click="onclickNextEndpoint()" :disabled="!selectedEndpoint" />
           </div>
         </div>
@@ -78,7 +78,7 @@
             </DataTable>
           </div>
           <div style="display:flex; gap:8px; margin-top:12px;">
-            <Button label="Undo" severity="secondary" @click="onclickUndoButton('4')" />
+            <Button label="Back" severity="secondary" @click="onclickBackButton('4')" />
             <Button label="Result" @click="goResult" :disabled="!filteredCriteria || filteredCriteria.length === 0" />
           </div>
         </div>
@@ -145,8 +145,8 @@ onMounted(async () => {
     console.error('Failed to read Excel:', err)
   }
 })
-function onclickUndoButton(currentStep) {
-  console.log('Undo button clicked for step:', currentStep)
+function onclickBackButton(currentStep) {
+  console.log('Back button clicked for step:', currentStep)
   if (currentStep === '2') {
     selectedCancerType.value = ''
     selectedTreatment.value = ''
@@ -231,7 +231,6 @@ function flushAll() {
 .step-layout { display: grid; grid-template-columns: 260px 1fr; gap: 12px; align-items: stretch; }
 .step-left { position: sticky; top: 12px; align-self: stretch; height: 100%; }
 .step-right { min-height: 300px; }
-/* 让 Stepper 充满高度并均匀分布步骤 */
 .step-left :deep(.p-stepper) { height: 100%; }
 .step-left :deep(.p-stepper-nav) { height: 100%; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; }
 .table-card {
