@@ -8,8 +8,8 @@
                         <div class="r-value">{{ result?.selectedCancerType || '-' }}</div>
                     </div>
                     <div class="r-card">
-                        <h3 class="r-title">Line of Therapy</h3>
-                        <div class="r-value">{{ resultRelatedMetadata.lineOfTherapy ?? '-' }}</div>
+                        <h3 class="r-title">Trial</h3>
+                        <div class="r-value">{{ result?.selectedTreatment ?? '-' }}</div>
                     </div>
                 </div>
 
@@ -20,11 +20,17 @@
                         <Column field="value" header="value" />
                     </DataTable>
                 </div>
-
-                <div class="r-card">
-                    <h3 class="r-title">Endpoint</h3>
-                    <div class="r-value">{{ result?.selectedEndpoint || '-' }}</div>
+                <div class="row-2">
+                    <div class="r-card">
+                        <h3 class="r-title">Endpoint</h3>
+                        <div class="r-value">{{ result?.selectedEndpoint || '-' }}</div>
+                    </div>
+                    <div class="r-card">
+                        <h3 class="r-title">Line of Therapy</h3>
+                        <div class="r-value">{{ resultRelatedMetadata.lineOfTherapy ?? '-' }}</div>
+                    </div>
                 </div>
+    
 
                 <div class="r-card push-down">
                     <h3 class="r-title">Criteria</h3>
@@ -53,11 +59,14 @@
                 <div  v-if="(Top4PathwaysResult && Top4PathwaysResult.length > 0)" class="right-stack">
                     <div class="r-card" style="min-height: 240px;">
                         <div class="r-card-header">
-                            <h3 class="r-title">Top 4 Pathways</h3>
-                            <Button class="ml-2" size="small" @click="onResetSort">
-                                Reset 
-                                <FontAwesomeIcon :icon="['fas', 'arrows-rotate']" />
-                            </Button>
+                            <div class="r-header-left">
+                                <h3 class="r-title">Top 4 Pathways</h3>
+                                <Button class="ml-2" size="small" @click="onResetSort">
+                                    Reset 
+                                    <FontAwesomeIcon :icon="['fas', 'arrows-rotate']" />
+                                </Button>
+                            </div>
+                            <Button size="small" severity="secondary" @click="onReturnToSelection">Return to Selection</Button>
                         </div>
                         <DataTable ref="topTableRef" v-model:selection="selectedTopPath" v-model:sortField="sortField" v-model:sortOrder="sortOrder" sortMode="single" :value="Top4PathwaysResult" selectionMode="single" :metaKeySelection="false" dataKey="path_id" rowHover tableStyle="margin-top: 24px;" size="large" @rowSelect="onTopSelect" @rowUnselect="onTopUnselect">
                             <Column field="pathName" header="Paths" />
@@ -83,7 +92,7 @@
                     </div>
                     <div class="r-card" style="min-height: 240px;">
                         <div class="r-card-header">
-                            <h3 class="r-title">Charts</h3>
+                            <h3 class="r-title">Origami Plots</h3>
                         </div>
                         <div class="r-card-content">
                             <div v-for="item in Top4PathwaysResult" :key="item.path_id">
@@ -112,6 +121,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 const props = defineProps({
     result: { type: Object, default: () => ({}) }
 })
+const emit = defineEmits(['returnToSelection'])
 
 const resultRelatedMetadata = ref({})
 const Top4PathwaysResult = ref([])
@@ -258,7 +268,7 @@ function getTop4Pathways(trailResult, criteria, endpoint, criteriaNameToIndex) {
           : { srcHr: 'hr_pfs', srcSelog: 'selog_hr_pfs', srcSucra: 'sucra_pfs' }
         const res = {
           path_id: labelId,
-          pathName: `${labelId}${displayIndices.length ? ` (${displayIndices.join(',')})` : ''}`,
+          pathName: `${displayIndices.length ? `${displayIndices.join(',')}` : ''}`,
           criteriaIndices: uniqueSorted,
           ae: row.ae,
           ease: row.ease,
@@ -295,6 +305,10 @@ function onResetSort() {
         Top4PathwaysResult.value = []
         queueMicrotask(() => (Top4PathwaysResult.value = tmp))
     }
+}
+
+function onReturnToSelection() {
+    emit('returnToSelection')
 }
 
 function getMaxes() {
@@ -398,7 +412,9 @@ function getChartOptions() {
   align-items: center;
   gap: 16px;
   padding: 8px;
+  justify-content: space-between;
 }
+.r-header-left { display: flex; align-items: center; gap: 16px; }
 .r-card-empty {
   display: flex;
   align-items: center;

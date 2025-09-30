@@ -4,7 +4,7 @@
         <div class="content">
             <HomeView v-if="activeView === 'home'" @start="activeView = 'step'" />
             <StepView v-else-if="activeView === 'step'" @result="onStepResult" />
-            <ResultView v-else-if="activeView === 'result'" :result="resultPayload" />
+            <ResultView v-else-if="activeView === 'result'" :result="resultPayload" @returnToSelection="activeView = 'step'" />
         </div>
     </div>
     

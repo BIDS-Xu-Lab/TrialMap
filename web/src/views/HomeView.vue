@@ -3,7 +3,7 @@
         <div class="container">
             <h1>Welcome to TrialMap!</h1>
             <p>TrialMap is an end-to-end machine learning framework for optimizing trial eligibility criteria using real-world data.</p>
-            <img src="../imgs/homepage_demo.png" alt="TrialMap" class="homepage-demo"/>
+            <img src="../imgs/front_cover.png" alt="TrialMap" class="homepage-demo"/>
             <Button label="Start Your Journey Now !" @click="$emit('start')"/>
         </div>
     </div>
@@ -34,10 +34,9 @@ defineEmits(['start'])
   text-align: center;
 }
 .homepage-demo {
-  width:70%;
-  height: 70%;
+  width:80%;
   object-fit: cover;
-  margin-bottom: 1rem;
-  margin-top: 1rem;
+  margin-bottom: 2rem;
+  margin-top: 2rem;
 }
 </style>
