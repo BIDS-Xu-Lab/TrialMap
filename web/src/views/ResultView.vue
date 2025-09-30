@@ -15,10 +15,16 @@
 
                 <div class="r-card">
                     <h3 class="r-title">Regimens</h3>
-                    <DataTable :value="regimenRows" tableStyle="min-width: 16rem" class="small-table" size="small">
-                        <Column field="label" header="name" />
-                        <Column field="value" header="value" />
-                    </DataTable>
+                    <div class="regimens">
+                        <div class="regimen-line">
+                            <span class="regimen-label">Treatment:</span>
+                            <span class="regimen-value">{{ resultRelatedMetadata.treatment || '-' }}</span>
+                        </div>
+                        <div class="regimen-line">
+                            <span class="regimen-label">Control:</span>
+                            <span class="regimen-value">{{ resultRelatedMetadata.control || '-' }}</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="row-2">
                     <div class="r-card">
@@ -112,7 +118,7 @@
  </template>
 
 <script setup>
-import {ref, onMounted, computed} from 'vue'
+import {ref, onMounted, computed, watch} from 'vue'
 import * as XLSX from 'xlsx'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -125,9 +131,9 @@ const emit = defineEmits(['returnToSelection'])
 
 const resultRelatedMetadata = ref({})
 const Top4PathwaysResult = ref([])
+const AllPathwaysResult = ref([])
 const Top4PathwaysColumns = ref([])
 const normParams = ref({})
-const regimenRows = ref([])
 const criteriaTableRows = ref([])
 const criteriaNameToIndex = computed(() => {
     const map = new Map()
@@ -189,10 +195,6 @@ onMounted(async () => {
     criteria: selectedCriteriaRows,
     selectedCriteria: props.result.selectedCriteria
     }
-    regimenRows.value = [
-        { label: 'treatment', value: resultRelatedMetadata.value.treatment || '-' },
-        { label: 'control', value: resultRelatedMetadata.value.control || '-' }
-    ]
     criteriaTableRows.value = resultRelatedMetadata.value.criteria || []
     const csvUrl = `${base}data/trail_dataset/${props.result.selectedTreatment}_results_web.csv`
     try {
@@ -200,6 +202,7 @@ onMounted(async () => {
         if (csvRes.ok) {
             const ct = (csvRes.headers.get('content-type') || '').toLowerCase()
             if (ct.includes('text/html')) {
+                AllPathwaysResult.value = []
                 Top4PathwaysResult.value = []
             } else {
                 try {
@@ -207,24 +210,31 @@ onMounted(async () => {
                     const csvWb = XLSX.read(csvText, { type: 'string' })
                     const csvWs = csvWb.Sheets[csvWb.SheetNames[0]]
                     const trailResult = csvWs ? XLSX.utils.sheet_to_json(csvWs, { defval: null }) : []
-                    Top4PathwaysResult.value = getTop4Pathways(
-                      trailResult,
-                      props.result.selectedCriteria,
-                      props.result.selectedEndpoint,
-                      criteriaNameToIndex.value
+                    // build full filtered result set first
+                    AllPathwaysResult.value = buildAllPathways(
+                        trailResult,
+                        props.result.selectedCriteria,
+                        props.result.selectedEndpoint,
+                        criteriaNameToIndex.value
                     )
+                    // normalization params are always based on the entire CSV
                     normParams.value = computeNormalizationParams(
-                      trailResult,
-                      props.result.selectedEndpoint
+                        trailResult,
+                        props.result.selectedEndpoint
                     )
+                    // show initial Top 4 (default by SUCRA)
+                    updateDisplayedTop4()
                 } catch (e) {
+                    AllPathwaysResult.value = []
                     Top4PathwaysResult.value = []
                 }
             }
         } else {
+            AllPathwaysResult.value = []
             Top4PathwaysResult.value = []
         }
     } catch (e) {
+        AllPathwaysResult.value = []
         Top4PathwaysResult.value = []
     }
 })
@@ -235,12 +245,12 @@ function format2(v) {
     return n.toFixed(2)
 }
 
-function getTop4Pathways(trailResult, criteria, endpoint, criteriaNameToIndex) {
+function buildAllPathways(trailResult, criteria, endpoint, criteriaNameToIndex) {
     const normalize = (s) => String(s ?? '').trim().toLowerCase()
     const selectedSet = new Set((criteria ?? []).map(normalize))
 
     // Filter rows where row.criteria (comma-separated) contains all selected tokens
-    let filtered = trailResult.filter((row) => {
+    const filtered = trailResult.filter((row) => {
         const rowTokens = String(row.criteria ?? '')
             .split(',')
             .map(normalize)
@@ -251,41 +261,61 @@ function getTop4Pathways(trailResult, criteria, endpoint, criteriaNameToIndex) {
         return true
     })
 
-    // Sort by SUCRA based on endpoint and take top 4
-    const key = endpoint === 'Overall survival (OS)' ? 'sucra_os' : 'sucra_pfs'
-    filtered = filtered
-        .sort((a, b) => Number(b[key] ?? -Infinity) - Number(a[key] ?? -Infinity))
-        .slice(0, 4)
+    // Map to UI items, keep all rows
+    const keyMap = endpoint === 'Overall survival (OS)'
+        ? { srcHr: 'hr_os', srcSelog: 'selog_hr_os', srcSucra: 'sucra_os' }
+        : { srcHr: 'hr_pfs', srcSelog: 'selog_hr_pfs', srcSucra: 'sucra_pfs' }
 
-    // attach linkage: indices of criteria rows and a user-facing path name
     return filtered.map((row, idx) => {
         const rowTokens = String(row.criteria ?? '').split(',').map(normalize)
         const indices = rowTokens
-          .map((t) => criteriaNameToIndex.get(t))
-          .filter((v) => Number.isInteger(v))
+            .map((t) => criteriaNameToIndex.get(t))
+            .filter((v) => Number.isInteger(v))
         const uniqueSorted = Array.from(new Set(indices)).sort((a, b) => a - b)
         const displayIndices = uniqueSorted.map((i) => i + 1)
         const labelId = String(
-          row.path_id ?? row.paths ?? row.pathId ?? row.path ?? `#${idx + 1}`
+            row.path_id ?? row.paths ?? row.pathId ?? row.path ?? `#${idx + 1}`
         ).trim()
-        const metricKeys = endpoint === 'Overall survival (OS)'
-          ? { srcHr: 'hr_os', srcSelog: 'selog_hr_os', srcSucra: 'sucra_os' }
-          : { srcHr: 'hr_pfs', srcSelog: 'selog_hr_pfs', srcSucra: 'sucra_pfs' }
-        const res = {
-          path_id: labelId,
-          pathName: `${displayIndices.length ? `${displayIndices.join(',')}` : ''}`,
-          criteriaIndices: uniqueSorted,
-          ae: row.ae,
-          ease: row.ease,
-          g_index: row.g_index,
-          number_of_patients: row.number_of_patients
+        const item = {
+            path_id: labelId,
+            pathName: `${displayIndices.length ? `${displayIndices.join(',')}` : ''}`,
+            criteriaIndices: uniqueSorted,
+            ae: row.ae,
+            ease: row.ease,
+            g_index: row.g_index,
+            number_of_patients: row.number_of_patients
         }
-        if (row[metricKeys.srcHr] != null) res.hr = row[metricKeys.srcHr]
-        if (row[metricKeys.srcSelog] != null) res.selog_hr = row[metricKeys.srcSelog]
-        if (row[metricKeys.srcSucra] != null) res.sucra = row[metricKeys.srcSucra]
-        return res
+        if (row[keyMap.srcHr] != null) item.hr = row[keyMap.srcHr]
+        if (row[keyMap.srcSelog] != null) item.selog_hr = row[keyMap.srcSelog]
+        if (row[keyMap.srcSucra] != null) item.sucra = row[keyMap.srcSucra]
+        return item
     })
 }
+
+function updateDisplayedTop4() {
+    const field = sortField.value
+    const order = typeof sortOrder.value === 'number' ? sortOrder.value : null
+    const asNumber = (v, fb) => {
+        const n = Number(v)
+        return Number.isFinite(n) ? n : fb
+    }
+    const metric = field || 'sucra'
+    const isDefault = field == null
+    // For default (SUCRA): higher is better (desc). Otherwise respect sortOrder (1 asc, -1 desc)
+    const factor = isDefault ? -1 : (order === -1 ? -1 : 1)
+    const fallbackAsc = factor === 1 ? Infinity : -Infinity
+    const sorted = [...(AllPathwaysResult.value || [])].sort((a, b) => {
+        const av = asNumber(a?.[metric], fallbackAsc)
+        const bv = asNumber(b?.[metric], fallbackAsc)
+        if (av === bv) return 0
+        return av > bv ? factor : -factor
+    })
+    Top4PathwaysResult.value = sorted.slice(0, 4)
+}
+
+watch([sortField, sortOrder], () => {
+    updateDisplayedTop4()
+})
 
 // interaction: highlight criteria rows by indices
 function criteriaRowClass(rowData, meta) {
@@ -305,11 +335,7 @@ function onTopUnselect() {
 function onResetSort() {
     sortField.value = null
     sortOrder.value = null
-    if (topTableRef?.value) {
-        const tmp = [...Top4PathwaysResult.value]
-        Top4PathwaysResult.value = []
-        queueMicrotask(() => (Top4PathwaysResult.value = tmp))
-    }
+    updateDisplayedTop4()
 }
 
 function onReturnToSelection() {
@@ -413,7 +439,10 @@ function getChartOptions() {
 .r-card-content-item { width: 240px; }
 .r-title { margin: 0 0 4px 0; font-size: 15px; font-weight: 600; }
 .r-value { color: #111827; font-size: 13px; }
-.small-table :deep(.p-datatable) { font-size: 12px; }
+.regimens { display: flex; flex-direction: column; gap: 4px; }
+.regimen-line { color: #111827; font-size: 13px; }
+.regimen-label { font-weight: 600; margin-right: 6px; color: #374151; }
+.regimen-value { color: #111827; }
 .criteria-table :deep(.p-datatable) { font-size: 11px; table-layout: fixed; }
 .criteria-table :deep(.p-datatable .p-datatable-thead > tr > th) { padding: 3px 6px; }
 .criteria-table :deep(.p-datatable .p-datatable-tbody > tr > td) { padding: 3px 6px; }
