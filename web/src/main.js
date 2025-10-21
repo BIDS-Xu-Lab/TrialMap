@@ -3,6 +3,7 @@ import App from './App.vue'
 import './assets/base.css'
 
 import PrimeVue from 'primevue/config'
+import Tooltip from 'primevue/tooltip'
 import Lara from '@primevue/themes/lara'
 import { definePreset } from '@primevue/themes'
 import 'primeicons/primeicons.css'
@@ -37,5 +38,6 @@ app.use(PrimeVue, {
     preset: GreenLara
   }
 })
+app.directive('tooltip', Tooltip)
 app.mount('#app')
 

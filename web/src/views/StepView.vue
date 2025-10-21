@@ -47,7 +47,7 @@
 
         <div class="panel-content" v-else-if="activeStep === '3'">
           <p>Select an endpoint:</p>
-          <div v-if="isAHNC" class="note">For advanced head and neck cancer, the Flatiron data does not include progression information, so we were only able to estimate HR for OS.</div>
+          <div v-if="isAHNC" class="note">For advanced head and neck cancer, the Flatiron Health database does not capture disease progression information.</div>
           <div v-for="(item, idx) in endpoint" :key="item" style="display:flex;align-items:center;gap:8px;margin:6px 0;">
             <RadioButton v-model="selectedEndpoint" :value="item" :inputId="`e-${idx}`" name="endpoint" :disabled="isAHNC && item === 'Progression-free survival (PFS)'" />
             <label :for="`e-${idx}`">{{ item }}</label>
@@ -121,6 +121,8 @@ const selectedCriteria = ref([])
 const isAHNC = ref(false)
 // keep a set of criteria names that must be applied for current trial
 const mustApplyCriteria = ref(new Set())
+// set of normalized criteria tokens that actually appear in the trial CSV
+const availableCriteriaTokens = ref(new Set())
 onMounted(async () => {
   try {
     flushAll()
@@ -175,7 +177,7 @@ function onclickNextCancerType() {
   activeStep.value = '2'
 }
 
-function onclickNextTreatment() {
+async function onclickNextTreatment() {
   console.log('Selected Treatment:', selectedTreatment.value)
   // derive from original rows, do not overwrite original data
   const rowsForTrial = trialCriteriaRows.value.filter(item => item.trial_name === selectedTreatment.value)
@@ -195,10 +197,17 @@ function onclickNextTreatment() {
   )
   mustApplyCriteria.value = mustSet
   console.log('Parsed Excel trialCriteria:', trialCriteria.value)
+  // compute availability from CSV for the selected trial
+  availableCriteriaTokens.value = await computeAvailableTokensForTrial(selectedTreatment.value, rowsForTrial)
   // derive rows from criteria by name
+  const normalize = (s) => String(s ?? '').trim().toLowerCase()
   filteredCriteria.value = criteria.value
     .filter(row => trialCriteria.value.includes(row.criteria_name))
-    .map(row => ({ ...row, must_apply: mustSet.has(row.criteria_name) }))
+    .map(row => {
+      const name = normalize(row.criteria_name)
+      const hasData = availableCriteriaTokens.value.has(name)
+      return { ...row, must_apply: mustSet.has(row.criteria_name), no_data: !hasData }
+    })
   console.log('Derived filteredCriteria rows:', filteredCriteria.value)
   activeStep.value = '3'
 }
@@ -222,6 +231,37 @@ function goResult() {
     selectedCriteria: selectedCriteria.value
   })
 
+}
+
+// read trial CSV and extract normalized criteria tokens that actually appear
+async function computeAvailableTokensForTrial(trialName, fallbackRows) {
+  const normalize = (s) => String(s ?? '').trim().toLowerCase()
+  try {
+    const base = import.meta.env.BASE_URL || '/'
+    const csvUrl = `${base}data/trail_dataset/${trialName}_results_web.csv`
+    const res = await fetch(csvUrl)
+    if (!res.ok) throw new Error('csv not found')
+    const ct = (res.headers.get('content-type') || '').toLowerCase()
+    if (ct.includes('text/html')) throw new Error('unexpected html')
+    const csvText = await res.text()
+    const wb = XLSX.read(csvText, { type: 'string' })
+    const ws = wb.Sheets[wb.SheetNames[0]]
+    const rows = ws ? XLSX.utils.sheet_to_json(ws, { defval: null }) : []
+    const tokens = new Set()
+    rows.forEach((row) => {
+      String(row?.criteria ?? '')
+        .split(',')
+        .map(normalize)
+        .filter(Boolean)
+        .forEach((t) => tokens.add(t))
+    })
+    return tokens
+  } catch (e) {
+    // fallback: treat all criteria listed for this trial as available
+    const tokens = new Set()
+    ;(fallbackRows || []).forEach((r) => tokens.add(normalize(r.criteria_name)))
+    return tokens
+  }
 }
 
 function flushAll() {

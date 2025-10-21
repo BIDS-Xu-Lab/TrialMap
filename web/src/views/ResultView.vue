@@ -47,7 +47,10 @@
                         <Column field="type" header="type" :style="{width:'90px'}" />
                         <Column field="criteria_description" header="criteria">
                             <template #body="{ data }">
-                                <div class="criteria-desc">{{ data.criteria_description }}</div>
+                                <div class="criteria-desc" style="display:flex;align-items:flex-start;gap:6px;">
+                                    <span class="criteria-text" v-tooltip.top="data.criteria_description">{{ truncateText(data.criteria_description, 20) }}</span>
+                                    <i class="pi pi-info-circle" v-tooltip.top="data.criteria_description" style="color:#6b7280; cursor: help; margin-left: auto;"></i>
+                                </div>
                             </template>
                         </Column>
                         <Column header="must" :style="{width:'90px', textAlign:'center'}">
@@ -62,7 +65,10 @@
             </div>
 
             <div class="col-right">
-                <div  v-if="(Top4PathwaysResult && Top4PathwaysResult.length > 0)" class="right-stack">
+                <div v-if="isLoading" class="r-card r-card-empty" style="flex: 1;">
+                    <ProgressSpinner style="width:40px;height:40px" strokeWidth="6" />
+                </div>
+                <div  v-else-if="(Top4PathwaysResult && Top4PathwaysResult.length > 0)" class="right-stack">
                     <div class="r-card" style="min-height: 240px;">
                         <div class="r-card-header">
                             <div class="r-header-left">
@@ -124,12 +130,14 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import ProgressSpinner from 'primevue/progressspinner'
 const props = defineProps({
     result: { type: Object, default: () => ({}) }
 })
 const emit = defineEmits(['returnToSelection'])
 
 const resultRelatedMetadata = ref({})
+const isLoading = ref(true)
 const Top4PathwaysResult = ref([])
 const AllPathwaysResult = ref([])
 const Top4PathwaysColumns = ref([])
@@ -197,6 +205,7 @@ onMounted(async () => {
     }
     criteriaTableRows.value = resultRelatedMetadata.value.criteria || []
     const csvUrl = `${base}data/trail_dataset/${props.result.selectedTreatment}_results_web.csv`
+    isLoading.value = true
     try {
         const csvRes = await fetch(csvUrl)
         if (csvRes.ok) {
@@ -236,6 +245,8 @@ onMounted(async () => {
     } catch (e) {
         AllPathwaysResult.value = []
         Top4PathwaysResult.value = []
+    } finally {
+        isLoading.value = false
     }
 })
 
@@ -249,13 +260,34 @@ function buildAllPathways(trailResult, criteria, endpoint, criteriaNameToIndex) 
     const normalize = (s) => String(s ?? '').trim().toLowerCase()
     const selectedSet = new Set((criteria ?? []).map(normalize))
 
+    // Build a set of all criteria tokens that actually appear in CSV rows
+    const availableTokens = new Set(
+        (trailResult || [])
+            .flatMap((row) => String(row?.criteria ?? '').split(',').map(normalize))
+            .filter((t) => t)
+    )
+
+    // Ignore selected criteria that never appear in this trial's CSV
+    const effectiveSelected = new Set(
+        Array.from(selectedSet).filter((t) => availableTokens.has(t))
+    )
+
+    // Pre-compute indices of missing-but-selected criteria to always display on paths
+    const missingSelectedIndices = Array.from(selectedSet)
+        .filter((t) => !availableTokens.has(t))
+        .map((t) => criteriaNameToIndex.get(t))
+        .filter((v) => Number.isInteger(v))
+        .sort((a, b) => a - b)
+
     // Filter rows where row.criteria (comma-separated) contains all selected tokens
     const filtered = trailResult.filter((row) => {
         const rowTokens = String(row.criteria ?? '')
             .split(',')
             .map(normalize)
         const rowSet = new Set(rowTokens)
-        for (const token of selectedSet) {
+        // If nothing effectively selected, include row
+        if (effectiveSelected.size === 0) return true
+        for (const token of effectiveSelected) {
             if (!rowSet.has(token)) return false
         }
         return true
@@ -271,15 +303,16 @@ function buildAllPathways(trailResult, criteria, endpoint, criteriaNameToIndex) 
         const indices = rowTokens
             .map((t) => criteriaNameToIndex.get(t))
             .filter((v) => Number.isInteger(v))
-        const uniqueSorted = Array.from(new Set(indices)).sort((a, b) => a - b)
-        const displayIndices = uniqueSorted.map((i) => i + 1)
+        // Merge with missing-but-selected indices for display/highlight
+        const mergedIndices = Array.from(new Set([...indices, ...missingSelectedIndices])).sort((a, b) => a - b)
+        const displayIndices = mergedIndices.map((i) => i + 1)
         const labelId = String(
             row.path_id ?? row.paths ?? row.pathId ?? row.path ?? `#${idx + 1}`
         ).trim()
         const item = {
             path_id: labelId,
             pathName: `${displayIndices.length ? `${displayIndices.join(',')}` : ''}`,
-            criteriaIndices: uniqueSorted,
+            criteriaIndices: mergedIndices,
             ae: row.ae,
             ease: row.ease,
             g_index: row.g_index,
@@ -375,6 +408,12 @@ function normalizeRangeValue(x, params) {
     const a = params.min_val ?? 0.4
     const b = params.max_val ?? 1
     return norm01 * (b - a) + a
+}
+
+function truncateText(text, maxLen) {
+    const s = String(text ?? '')
+    if (s.length <= maxLen) return s
+    return s.slice(0, maxLen) + '...'
 }
 
 function getChartData(item) {
