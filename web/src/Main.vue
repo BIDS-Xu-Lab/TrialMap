@@ -1,10 +1,10 @@
 <template>
     <div class="page">
-        <Banner @home="activeView = 'home'" />
+        <Banner @home="onGoHome" />
         <div class="content">
-            <HomeView v-if="activeView === 'home'" @start="activeView = 'step'" />
-            <StepView v-else-if="activeView === 'step'" @result="onStepResult" />
-            <ResultView v-else-if="activeView === 'result'" :result="resultPayload" @returnToSelection="activeView = 'step'" />
+            <HomeView v-if="activeView === 'home'" @start="onStartFromHome" />
+            <StepView v-else-if="activeView === 'step'" :key="stepViewKey" :initialStep="returnToStep" :initialData="resultPayload" @result="onStepResult" />
+            <ResultView v-else-if="activeView === 'result'" :result="resultPayload" @returnToSelection="onReturnToSelection" />
         </div>
     </div>
     
@@ -18,10 +18,37 @@ import StepView from './views/StepView.vue'
 import ResultView from './views/ResultView.vue'
 const activeView = ref('home')
 const resultPayload = ref({})
+const returnToStep = ref('1')
+const stepViewKey = ref(0)
+
+function onStartFromHome() {
+  // Reset state when starting fresh from home
+  returnToStep.value = '1'
+  resultPayload.value = {}
+  stepViewKey.value++ // Force re-mount StepView
+  activeView.value = 'step'
+}
+
+function onGoHome() {
+  // Reset state when going home
+  returnToStep.value = '1'
+  resultPayload.value = {}
+  activeView.value = 'home'
+}
 
 function onStepResult(payload) {
   resultPayload.value = payload
   activeView.value = 'result'
+}
+
+function onReturnToSelection(data) {
+  console.log('onReturnToSelection called with data:', data)
+  returnToStep.value = data?.step || '1'
+  console.log('returnToStep set to:', returnToStep.value)
+  console.log('resultPayload:', resultPayload.value)
+  stepViewKey.value++ // Force re-mount StepView with new props
+  console.log('stepViewKey incremented to:', stepViewKey.value)
+  activeView.value = 'step'
 }
 </script>
 

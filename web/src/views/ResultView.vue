@@ -40,7 +40,7 @@
 
                 <div class="r-card push-down">
                     <h3 class="r-title">Criteria</h3>
-                    <DataTable :value="criteriaTableRows" tableStyle="min-width: 24rem" class="criteria-table" size="small" :rowClass="criteriaRowClass" scrollable scrollHeight="320px">
+                    <DataTable :value="criteriaTableRows" tableStyle="min-width: 24rem" class="criteria-table" size="small" :rowClass="criteriaRowClass">
                         <Column header="#" :style="{width:'40px'}">
                             <template #body="{ index }">{{ index + 1 }}</template>
                         </Column>
@@ -72,8 +72,11 @@
                     <div class="r-card" style="min-height: 240px;">
                         <div class="r-card-header">
                             <div class="r-header-left">
-                                <h3 class="r-title">Top 4 Pathways</h3>
-                                <Button class="ml-2" size="small" @click="onResetSort">
+                                <h3 class="r-title" style="display:flex;align-items:center;gap:6px;">
+                                    Top paths
+                                    <i class="pi pi-info-circle" v-tooltip.top="`By uncertainty-aware ranking`" style="color:#6b7280; cursor: help; font-size:14px; line-height:1; font-weight:normal;"></i>
+                                </h3>
+                                <Button class="ml-2" size="small" @click="onResetSort"> 
                                     Reset 
                                     <FontAwesomeIcon :icon="['fas', 'arrows-rotate']" />
                                 </Button>
@@ -81,23 +84,66 @@
                             <Button size="small" severity="secondary" @click="onReturnToSelection">Return to Selection</Button>
                         </div>
                         <DataTable ref="topTableRef" v-model:selection="selectedTopPath" v-model:sortField="sortField" v-model:sortOrder="sortOrder" sortMode="single" :value="Top4PathwaysResult" selectionMode="single" :metaKeySelection="false" dataKey="path_id" rowHover tableStyle="margin-top: 24px;" size="large" @rowSelect="onTopSelect" @rowUnselect="onTopUnselect">
-                            <Column field="pathName" header="Paths" />
-                            <Column field="hr" header="HR" sortable dataType="numeric">
+                            <Column field="pathName" header="">
+                                <template #header>
+                                    <div style="display:flex;align-items:center;gap:4px;" v-tooltip.top="`Combinations of eligibility criteria`">
+                                        <b style="line-height:1;">Paths</b>
+                                        <i class="pi pi-info-circle" style="color:#6b7280; cursor: help; font-size:14px; line-height:1;"></i>
+                                    </div>
+                                </template>
+                            </Column>
+                            <Column field="hr" header="" sortable dataType="numeric">
+                                <template #header>
+                                    <div style="display:flex;align-items:center;gap:4px;" v-tooltip.top="`Treatment efficacy (hazard ratio)`">
+                                        <b style="line-height:1;">HR</b>
+                                        <i class="pi pi-info-circle" style="color:#6b7280; cursor: help; font-size:14px; line-height:1;"></i>
+                                    </div>
+                                </template>
                                 <template #body="{ data }">{{ format2(data.hr) }}</template>
                             </Column>
-                            <Column field="ae" header="AE" sortable dataType="numeric">
+                            <Column field="ae" header="" sortable dataType="numeric">
+                                <template #header>
+                                    <div style="display:flex;align-items:center;gap:4px;" v-tooltip.top="`Safety (adverse event rate)`">
+                                        <b style="line-height:1;">AE</b>
+                                        <i class="pi pi-info-circle" style="color:#6b7280; cursor: help; font-size:14px; line-height:1;"></i>
+                                    </div>
+                                </template>
                                 <template #body="{ data }">{{ format2(data.ae) }}</template>
                             </Column>
-                            <Column field="number_of_patients" header="# of Patients" sortable dataType="numeric">
+                            <Column field="number_of_patients" header="" sortable dataType="numeric">
+                                <template #header>
+                                    <div style="display:flex;align-items:center;gap:4px;" v-tooltip.top="`Feasibility (number of eligible patients in EHR data)`">
+                                        <b style="line-height:1;"># of Patients</b>
+                                        <i class="pi pi-info-circle" style="color:#6b7280; cursor: help; font-size:14px; line-height:1;"></i>
+                                    </div>
+                                </template>
                                 <template #body="{ data }">{{ data.number_of_patients }}</template>
                             </Column>
-                            <Column field="ease" header="EASE" sortable dataType="numeric">
+                            <Column field="ease" header="" sortable dataType="numeric">
+                                <template #header>
+                                    <div style="display:flex;align-items:center;gap:4px;" v-tooltip.top="`Validity (systematic error measured by EASE score)`">
+                                        <b style="line-height:1;">EASE</b>
+                                        <i class="pi pi-info-circle" style="color:#6b7280; cursor: help; font-size:14px; line-height:1;"></i>
+                                    </div>
+                                </template>
                                 <template #body="{ data }">{{ format2(data.ease) }}</template>
                             </Column>
-                            <Column field="g_index" header="G-Index" sortable dataType="numeric">
+                            <Column field="g_index" header="" sortable dataType="numeric">
+                                <template #header>
+                                    <div style="display:flex;align-items:center;gap:4px;" v-tooltip.top="`Generalizability (distance from the overall population)`">
+                                        <b style="line-height:1;">G-Index</b>
+                                        <i class="pi pi-info-circle" style="color:#6b7280; cursor: help; font-size:14px; line-height:1;"></i>
+                                    </div>
+                                </template>
                                 <template #body="{ data }">{{ format2(data.g_index) }}</template>
                             </Column>
-                            <Column field="selog_hr" header="selogHR" sortable dataType="numeric">
+                            <Column field="selog_hr" header="" sortable dataType="numeric">
+                                <template #header>
+                                    <div style="display:flex;align-items:center;gap:4px;" v-tooltip.top="`Efficiency (standard error of logHR)`">
+                                        <b style="line-height:1;">selogHR</b>
+                                        <i class="pi pi-info-circle" style="color:#6b7280; cursor: help; font-size:14px; line-height:1;"></i>
+                                    </div>
+                                </template>
                                 <template #body="{ data }">{{ format2(data.selog_hr) }}</template>
                             </Column>
                         </DataTable>
@@ -372,7 +418,7 @@ function onResetSort() {
 }
 
 function onReturnToSelection() {
-    emit('returnToSelection')
+    emit('returnToSelection', { step: '4' })
 }
 
 function computeNormalizationParams(allRows, endpoint) {
