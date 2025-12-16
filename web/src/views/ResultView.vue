@@ -215,7 +215,7 @@
                                 Duan, R., Tong, J., Sutton, A. J., Asch, D. A., Chu, H., Schmid, C. H., & Chen, Y. (2023). Origami plot: a novel multivariate data visualization tool that improves radar chart. <em>Journal of clinical epidemiology</em>, 156, 85-94.
                             </li>
                             <li class="reference-item">
-                                Lu, Y., Tong, J., Lei, Y., Sutton, A. J., Chu, H., Levine, L. D., ... & Chen, Y. (2024). OrigamiPlot: An R Package and Shiny Web App Enhanced Visualizations for Multivariate Data. <em>arXiv preprint arXiv:2411.12674</em>.
+                                Lu, Y., Tong, J., Lei, Y., Sutton, A. J., Chu, H., Levine, L. D., Lumley, T., Asch, D. A., Duan, R., Schmid, C. H., & Chen, Y. (2024). OrigamiPlot: An R Package and Shiny Web App Enhanced Visualizations for Multivariate Data. <em>arXiv preprint arXiv:2411.12674</em>.
                             </li>
                         </ol>
                     </div>
