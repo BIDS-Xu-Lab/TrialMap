@@ -235,7 +235,7 @@ async function restoreState(data) {
   if (data.selectedCancerType) {
     selectedCancerType.value = data.selectedCancerType
     treatment.value = [...new Set(metadata.value.filter(item => item.cancer_type === data.selectedCancerType).map(item => item.trial_name))]
-    isAHNC.value = String(data.selectedCancerType).trim().toLowerCase() === 'advanced head and neck cancer (ahnc)'
+    isAHNC.value = String(data.selectedCancerType).trim().toLowerCase().includes('head and neck')
   }
   
   if (data.selectedTreatment) {
@@ -299,7 +299,7 @@ function onclickNextCancerType() {
   console.log('Selected Cancer Type:', selectedCancerType.value)
   treatment.value =[ ...new Set(metadata.value.filter(item => item.cancer_type === selectedCancerType.value).map(item => item.trial_name))]
   console.log('Parsed Excel treatment:', treatment.value)
-  isAHNC.value = String(selectedCancerType.value).trim().toLowerCase() === 'advanced head and neck cancer (ahnc)'
+  isAHNC.value = String(selectedCancerType.value).trim().toLowerCase().includes('head and neck')
   activeStep.value = '2'
 }
 

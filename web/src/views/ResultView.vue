@@ -289,9 +289,29 @@ const chartOptions = computed(() => ({
 // 缓存图表数据，避免每次渲染都创建新对象
 const chartDataList = shallowRef([])
 
+function computeNormParamsFromItems(items) {
+    const getNums = (key) => items.map(r => Number(r?.[key])).filter(n => Number.isFinite(n))
+    const makeParams = (arr, reverse) => {
+        const has = arr.length > 0
+        const min = has ? Math.min(...arr) : 0
+        const max = has ? Math.max(...arr) : 0
+        return { min, max, reverse, min_val: 0.4, max_val: 1 }
+    }
+    return {
+        hr: makeParams(getNums('hr'), true),
+        selog_hr: makeParams(getNums('selog_hr'), true),
+        ae: makeParams(getNums('ae'), true),
+        ease: makeParams(getNums('ease'), true),
+        g_index: makeParams(getNums('g_index'), false),
+        number_of_patients: makeParams(getNums('number_of_patients'), false)
+    }
+}
+
 function updateChartDataList() {
-    const p = normParams.value || {}
-    chartDataList.value = Top4PathwaysResult.value.map(item => {
+    const top4 = Top4PathwaysResult.value
+    if (!top4 || top4.length === 0) { chartDataList.value = []; return }
+    const p = computeNormParamsFromItems(top4)
+    chartDataList.value = top4.map(item => {
         const gap = 0.25
         const values = [
             normalizeRangeValue(item.hr, p.hr), gap,
@@ -321,8 +341,8 @@ function updateChartDataList() {
     })
 }
 
-// 只在 Top4PathwaysResult 或 normParams 变化时更新图表数据
-watch([Top4PathwaysResult, normParams], () => {
+// 只在 Top4PathwaysResult 变化时更新图表数据
+watch([Top4PathwaysResult], () => {
     updateChartDataList()
 }, { 
     deep: false, // 不使用深度监听，避免不必要的更新
@@ -480,8 +500,8 @@ function buildAllPathways(trailResult, criteria, endpoint, criteriaNameToIndex) 
 
     // Map to UI items, keep all rows
     const keyMap = endpoint === 'Overall survival (OS)'
-        ? { srcHr: 'hr_os', srcSelog: 'selog_hr_os', srcSucra: 'sucra_os' }
-        : { srcHr: 'hr_pfs', srcSelog: 'selog_hr_pfs', srcSucra: 'sucra_pfs' }
+        ? { srcHr: 'hr_os', srcSelog: 'selog_hr_os', srcSucra: 'sucra_os', srcPareto: 'pareto_os' }
+        : { srcHr: 'hr_pfs', srcSelog: 'selog_hr_pfs', srcSucra: 'sucra_pfs', srcPareto: 'pareto_pfs' }
 
     return filtered.map((row, idx) => {
         const rowTokens = String(row.criteria ?? '').split(',').map(normalize)
@@ -506,6 +526,7 @@ function buildAllPathways(trailResult, criteria, endpoint, criteriaNameToIndex) 
         if (row[keyMap.srcHr] != null) item.hr = row[keyMap.srcHr]
         if (row[keyMap.srcSelog] != null) item.selog_hr = row[keyMap.srcSelog]
         if (row[keyMap.srcSucra] != null) item.sucra = row[keyMap.srcSucra]
+        if (row[keyMap.srcPareto] != null) item.pareto = Number(row[keyMap.srcPareto])
         return item
     })
 }
@@ -519,8 +540,20 @@ function getSortedData() {
     }
     const metric = field || 'sucra'
     const isDefault = field == null
-    // For default (SUCRA): higher is better (desc). Otherwise respect sortOrder (1 asc, -1 desc)
-    const factor = isDefault ? -1 : (order === -1 ? -1 : 1)
+    if (isDefault) {
+        // Default sort: pareto first (descending), then SUCRA descending
+        const sorted = [...(AllPathwaysResult.value || [])].sort((a, b) => {
+            const ap = Number(a?.pareto) || 0
+            const bp = Number(b?.pareto) || 0
+            if (ap !== bp) return bp - ap  // pareto=1 first
+            const av = asNumber(a?.sucra, -Infinity)
+            const bv = asNumber(b?.sucra, -Infinity)
+            return bv - av  // higher sucra first
+        })
+        return sorted
+    }
+    // User-selected column sort: respect sortOrder (1 asc, -1 desc)
+    const factor = order === -1 ? -1 : 1
     const fallbackAsc = factor === 1 ? Infinity : -Infinity
     const sorted = [...(AllPathwaysResult.value || [])].sort((a, b) => {
         const av = asNumber(a?.[metric], fallbackAsc)
