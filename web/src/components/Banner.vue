@@ -11,11 +11,10 @@
 </template>
 
 <script setup>
-const emit = defineEmits(['home', 'logo-click'])
+const emit = defineEmits(['home'])
 
 function onLogoClick() {
   emit('home')
-  emit('logo-click')
 }
 </script>
 
