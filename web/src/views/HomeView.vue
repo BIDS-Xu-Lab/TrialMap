@@ -44,7 +44,6 @@
                     :src="demoVideo"
                     autoplay
                     controls
-                    muted
                     playsinline
                     preload="metadata"
                 ></video>
